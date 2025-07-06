@@ -19,12 +19,12 @@ func main() {
 	var issues []types.Issue
 
 	var verbose *bool = flag.Bool("v", false, "Verbose output")
-	var exitCode = flag.Int("exit-code", 1, "Exit code when issues are found")
+	var exitCode *int = flag.Int("exit-code", 1, "Exit code when issues are found")
 	var color *bool = flag.Bool("c", true, "Color output")
 
-	var red = "\033[31m"
-	var blue = "\033[34m"
-	var reset = "\033[0m"
+	var red string = "\033[31m"
+	var blue string = "\033[34m"
+	var reset string = "\033[0m"
 
 	flag.Parse()
 
@@ -35,7 +35,7 @@ func main() {
 	}
 
 	// Use command line arguments as paths, default to "." if none provided
-	paths := flag.Args()
+	var paths []string = flag.Args()
 	if len(paths) == 0 {
 		paths = []string{"."}
 	}
@@ -43,7 +43,8 @@ func main() {
 	l = linter.New()
 
 	// Process each path argument
-	for _, path := range paths {
+	var path string
+	for _, path = range paths {
 		var walkPath string
 		var recursive bool
 
@@ -66,7 +67,8 @@ func main() {
 
 			// If not recursive, only process files in the exact directory
 			if !recursive {
-				rel, _ := filepath.Rel(walkPath, currentPath)
+				var rel string
+				rel, _ = filepath.Rel(walkPath, currentPath)
 				if strings.Contains(rel, string(filepath.Separator)) {
 					if info.IsDir() {
 						return filepath.SkipDir
@@ -96,7 +98,8 @@ func main() {
 		return issues[i].Line > issues[j].Line // File line dec
 	})
 
-	for _, issue := range issues {
+	var issue types.Issue
+	for _, issue = range issues {
 		fmt.Printf("%s%s:%d:%d: [%s] %s%s\n",
 			red, issue.File, issue.Line, issue.Column,
 			issue.Rule, issue.Message, reset,

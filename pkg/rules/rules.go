@@ -85,8 +85,12 @@ func (r *VarNoTypeRule) Check(fset *token.FileSet, file *ast.File) []types.Issue
 		switch node := n.(type) {
 		case *ast.GenDecl:
 			if node.Tok == token.VAR {
-				for _, spec := range node.Specs {
-					if valueSpec, ok := spec.(*ast.ValueSpec); ok {
+				var spec ast.Spec
+				for _, spec = range node.Specs {
+					var valueSpec *ast.ValueSpec
+					var ok bool
+					valueSpec, ok = spec.(*ast.ValueSpec)
+					if ok {
 						// Check if type is not specified but values are provided
 						if valueSpec.Type == nil && len(valueSpec.Values) > 0 {
 							var pos token.Position
@@ -123,7 +127,8 @@ func (r *NamedReturnsRule) Check(fset *token.FileSet, file *ast.File) []types.Is
 		switch node := n.(type) {
 		case *ast.FuncDecl:
 			if node.Type.Results != nil && len(node.Type.Results.List) > 0 {
-				for _, field := range node.Type.Results.List {
+				var field *ast.Field
+				for _, field = range node.Type.Results.List {
 					// Check if any return parameter has a name
 					if len(field.Names) > 0 {
 						var pos token.Position
@@ -163,7 +168,10 @@ func (r *NakedReturnRule) Check(fset *token.FileSet, file *ast.File) []types.Iss
 				// Find the containing function to check if it has named returns
 				var containingFunc *ast.FuncDecl
 				ast.Inspect(file, func(fn ast.Node) bool {
-					if funcDecl, ok := fn.(*ast.FuncDecl); ok {
+					var funcDecl *ast.FuncDecl
+					var ok bool
+					funcDecl, ok = fn.(*ast.FuncDecl)
+					if ok {
 						// Check if the return statement is within this function
 						if funcDecl.Pos() <= node.Pos() && node.Pos() <= funcDecl.End() {
 							containingFunc = funcDecl
@@ -175,8 +183,9 @@ func (r *NakedReturnRule) Check(fset *token.FileSet, file *ast.File) []types.Iss
 
 				// If we found a containing function and it has named returns, flag it
 				if containingFunc != nil && containingFunc.Type.Results != nil {
-					hasNamedReturns := false
-					for _, field := range containingFunc.Type.Results.List {
+					var hasNamedReturns bool = false
+					var field *ast.Field
+					for _, field = range containingFunc.Type.Results.List {
 						if len(field.Names) > 0 {
 							hasNamedReturns = true
 							break
@@ -217,8 +226,12 @@ func (r *ConstNoTypeRule) Check(fset *token.FileSet, file *ast.File) []types.Iss
 		switch node := n.(type) {
 		case *ast.GenDecl:
 			if node.Tok == token.CONST {
-				for _, spec := range node.Specs {
-					if valueSpec, ok := spec.(*ast.ValueSpec); ok {
+				var spec ast.Spec
+				for _, spec = range node.Specs {
+					var valueSpec *ast.ValueSpec
+					var ok bool
+					valueSpec, ok = spec.(*ast.ValueSpec)
+					if ok {
 						// Check if type is not specified but values are provided
 						if valueSpec.Type == nil && len(valueSpec.Values) > 0 {
 							var pos token.Position

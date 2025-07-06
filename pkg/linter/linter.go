@@ -30,7 +30,8 @@ func New() *Linter {
 func (l *Linter) Lint(files []string) []types.Issue {
 	var allIssues []types.Issue
 
-	for _, file := range files {
+	var file string
+	for _, file = range files {
 		var issues []types.Issue
 		issues = l.lintFile(file)
 		allIssues = append(allIssues, issues...)
@@ -58,7 +59,8 @@ func (l *Linter) lintFile(filename string) []types.Issue {
 
 	var issues []types.Issue
 
-	for _, rule := range l.rules {
+	var rule types.Rule
+	for _, rule = range l.rules {
 		var ruleIssues []types.Issue
 		ruleIssues = rule.Check(fset, src)
 		issues = append(issues, ruleIssues...)
@@ -70,7 +72,8 @@ func (l *Linter) lintFile(filename string) []types.Issue {
 func filterNolintIssues(issues []types.Issue, file *ast.File, fset *token.FileSet) []types.Issue {
 	var filtered []types.Issue
 
-	for _, issue := range issues {
+	var issue types.Issue
+	for _, issue = range issues {
 		if !isNolintComment(file, issue.Line, issue.Rule, fset) {
 			filtered = append(filtered, issue)
 		}
@@ -80,8 +83,10 @@ func filterNolintIssues(issues []types.Issue, file *ast.File, fset *token.FileSe
 }
 
 func isNolintComment(file *ast.File, line int, ruleName string, fset *token.FileSet) bool {
-	for _, commentGroup := range file.Comments {
-		for _, comment := range commentGroup.List {
+	var commentGroup *ast.CommentGroup
+	for _, commentGroup = range file.Comments {
+		var comment *ast.Comment
+		for _, comment = range commentGroup.List {
 			var commentPos token.Position
 			commentPos = fset.Position(comment.Pos())
 

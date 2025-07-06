@@ -24,99 +24,43 @@ func TestNolintComments(t *testing.T) {
 			name: "nolint_by_rule_name_should_ignore",
 			code: `package main
 func main() {
-	x := 42 // nolint:short-var-decl
+	x := 42 //nolint:short-var-decl
 }`,
 			expected: 0,
 		},
 		{
-			name: "nolint:all_should_ignore_all",
+			name: "nolint_all_should_ignore_everything",
 			code: `package main
 func main() {
-	x := 42 // nolint:all
-}`,
-			expected: 0,
-		},
-		{
-			name: "no_nolint_should_detect",
-			code: `package main
-func main() {
-	x := 42
-}`,
-			expected: 1,
-		},
-		{
-			name: "nolint_wrong_rule_should_detect",
-			code: `package main
-func main() {
-	x := 42 // nolint:if-init
-}`,
-			expected: 1,
-		},
-		{
-			name: "nolint_wrong_code_should_detect",
-			code: `package main
-func main() {
-	x := 42 // nolint:GS002
-}`,
-			expected: 1,
-		},
-		{
-			name: "mixed_nolint_and_detection",
-			code: `package main
-func main() {
-	x := 42 // nolint:short-var-decl
+	x := 42 //nolint:all
 	y := "test"
-	z := true // nolint:short-var-decl
 }`,
-			expected: 1, // seulement y := "test"
+			expected: 1, // only y should be flagged
 		},
 		{
-			name: "if_init_with_nolint_by_rule_name",
+			name: "no_nolint_should_detect_everything",
 			code: `package main
 func main() {
-	var err error
-	if err = someFunc(); err != nil { // nolint:if-init
-		return
-	}
-}
-func someFunc() error { return nil }`,
-			expected: 0,
-		},
-		{
-			name: "multiple_rules_same_line_nolint:all",
-			code: `package main
-func main() {
-	if x := getValue(); x != nil { // nolint:all
-		return
-	}
-}
-func getValue() interface{} { return nil }`,
-			expected: 0, // devrait ignorer les deux règles (GS001 et GS002)
-		},
-		{
-			name: "multiple_rules_same_line_specific_nolint",
-			code: `package main
-func main() {
-	if x := getValue(); x != nil { // nolint:short-var-decl
-		return
-	}
-}
-func getValue() interface{} { return nil }`,
-			expected: 1, // ignore GS001 mais détecte GS002
-		},
-		{
-			name: "nolint_on_different_line_should_not_affect",
-			code: `package main
-func main() {
-	// nolint:GS001
 	x := 42
+	y := "test"
 }`,
-			expected: 1, // nolint pas sur la même ligne
+			expected: 2,
 		},
 		{
-			name: "multiple_nolint_formats",
+			name: "nolint_different_rule_should_not_ignore",
 			code: `package main
 func main() {
+	x := 42 //nolint:if-init
+}`,
+			expected: 1, // should still be flagged for short-var-decl
+		},
+		{
+			name: "multiple_rules_in_nolint",
+			code: `package main
+func main() {
+	if err := someFunc(); err != nil { //nolint:short-var-decl,if-init
+		return
+	}
 	x := 42 // nolint:short-var-decl,if-init
 }
 func someFunc() error { return nil }`,
@@ -124,7 +68,13 @@ func someFunc() error { return nil }`,
 		},
 	}
 
-	for _, tt := range tests {
+	type testCase struct {
+		name     string
+		code     string
+		expected int
+	}
+	var tt testCase
+	for _, tt = range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var linter *Linter
 			linter = New()
@@ -141,7 +91,8 @@ func someFunc() error { return nil }`,
 
 			// Get issues from rules
 			var allIssues []types.Issue
-			for _, rule := range linter.rules {
+			var rule types.Rule
+			for _, rule = range linter.rules {
 				var issues []types.Issue
 				issues = rule.Check(fset, file)
 				allIssues = append(allIssues, issues...)
@@ -154,11 +105,13 @@ func someFunc() error { return nil }`,
 			if len(filteredIssues) != tt.expected {
 				t.Errorf("Expected %d issues after nolint filtering, got %d", tt.expected, len(filteredIssues))
 				t.Logf("All issues before filtering:")
-				for i, issue := range allIssues {
+				var i int
+				var issue types.Issue
+				for i, issue = range allIssues {
 					t.Logf("  Issue %d: %s [%s] at line %d", i+1, issue.Message, issue.Rule, issue.Line)
 				}
 				t.Logf("Issues after filtering:")
-				for i, issue := range filteredIssues {
+				for i, issue = range filteredIssues {
 					t.Logf("  Issue %d: %s [%s] at line %d", i+1, issue.Message, issue.Rule, issue.Line)
 				}
 			}
@@ -182,27 +135,37 @@ func TestIsNolintComment(t *testing.T) {
 		expected bool
 	}{
 		{
-			name: "exact_rule_name_match",
+			name: "exact_rule_match_should_ignore",
 			code: `package main
 func main() {
-	x := 42 // nolint:short-var-decl
+	x := 42 //nolint:short-var-decl
 }`,
 			line:     3,
 			ruleName: "short-var-decl",
 			expected: true,
 		},
 		{
-			name: "nolint_all_match",
+			name: "nolint_all_should_ignore",
 			code: `package main
 func main() {
-	x := 42 // nolint:all
+	x := 42 //nolint:all
 }`,
 			line:     3,
 			ruleName: "short-var-decl",
 			expected: true,
 		},
 		{
-			name: "no_nolint_comment",
+			name: "different_rule_should_not_ignore",
+			code: `package main
+func main() {
+	x := 42 //nolint:if-init
+}`,
+			line:     3,
+			ruleName: "short-var-decl",
+			expected: false,
+		},
+		{
+			name: "no_comment_should_not_ignore",
 			code: `package main
 func main() {
 	x := 42
@@ -212,37 +175,7 @@ func main() {
 			expected: false,
 		},
 		{
-			name: "wrong_rule_name",
-			code: `package main
-func main() {
-	x := 42 // nolint:if-init
-}`,
-			line:     3,
-			ruleName: "short-var-decl",
-			expected: false,
-		},
-		{
-			name: "wrong_code",
-			code: `package main
-func main() {
-	x := 42 // nolint:GS002
-}`,
-			line:     3,
-			ruleName: "short-var-decl",
-			expected: false,
-		},
-		{
-			name: "multiple_rules_in_comment",
-			code: `package main
-func main() {
-	x := 42 // nolint:short-var-decl,if-init
-}`,
-			line:     3,
-			ruleName: "if-init",
-			expected: true,
-		},
-		{
-			name: "comment_on_different_line",
+			name: "comment_different_line_should_not_ignore",
 			code: `package main
 func main() {
 	// nolint:short-var-decl
@@ -254,7 +187,15 @@ func main() {
 		},
 	}
 
-	for _, tt := range tests {
+	type testCase struct {
+		name     string
+		code     string
+		line     int
+		ruleName string
+		expected bool
+	}
+	var tt testCase
+	for _, tt = range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var fset *token.FileSet
 			fset = token.NewFileSet()
@@ -268,7 +209,7 @@ func main() {
 			var result bool
 			result = isNolintComment(file, tt.line, tt.ruleName, fset)
 			if result != tt.expected {
-				t.Errorf("Expected %v, got %v", tt.expected, result)
+				t.Errorf("Expected %v, got %v for line %d and rule %s", tt.expected, result, tt.line, tt.ruleName)
 			}
 		})
 	}

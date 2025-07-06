@@ -94,7 +94,12 @@ func someFunc() string { return "" }`,
 	var rule *ShortVarDeclRule
 	rule = &ShortVarDeclRule{}
 
-	for _, tt := range tests {
+	var tt struct {
+		name     string
+		code     string
+		expected int
+	}
+	for _, tt = range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var fset *token.FileSet
 			fset = token.NewFileSet()
@@ -109,13 +114,16 @@ func someFunc() string { return "" }`,
 			issues = rule.Check(fset, file)
 			if len(issues) != tt.expected {
 				t.Errorf("Expected %d issues, got %d", tt.expected, len(issues))
-				for i, issue := range issues {
+				var i int
+				var issue types.Issue
+				for i, issue = range issues {
 					t.Logf("Issue %d: %s at line %d", i+1, issue.Message, issue.Line)
 				}
 			}
 
 			// Verify all issues have correct code and rule name
-			for _, issue := range issues {
+			var issue types.Issue
+			for _, issue = range issues {
 				if issue.Rule != "short-var-decl" {
 					t.Errorf("Expected rule 'short-var-decl', got %s", issue.Rule)
 				}
@@ -205,7 +213,12 @@ func main() {
 	var rule *VarNoTypeRule
 	rule = &VarNoTypeRule{}
 
-	for _, tt := range tests {
+	var tt struct {
+		name     string
+		code     string
+		expected int
+	}
+	for _, tt = range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var fset *token.FileSet
 			fset = token.NewFileSet()
@@ -220,13 +233,16 @@ func main() {
 			issues = rule.Check(fset, file)
 			if len(issues) != tt.expected {
 				t.Errorf("Expected %d issues, got %d", tt.expected, len(issues))
-				for i, issue := range issues {
+				var i int
+				var issue types.Issue
+				for i, issue = range issues {
 					t.Logf("Issue %d: %s at line %d", i+1, issue.Message, issue.Line)
 				}
 			}
 
 			// Verify all issues have correct code and rule name
-			for _, issue := range issues {
+			var issue types.Issue
+			for _, issue = range issues {
 				if issue.Rule != "var-no-type" {
 					t.Errorf("Expected rule 'var-no-type', got %s", issue.Rule)
 				}
@@ -314,7 +330,12 @@ func third() (result bool) {
 	var rule *NamedReturnsRule
 	rule = &NamedReturnsRule{}
 
-	for _, tt := range tests {
+	var tt struct {
+		name     string
+		code     string
+		expected int
+	}
+	for _, tt = range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var fset *token.FileSet
 			fset = token.NewFileSet()
@@ -329,13 +350,16 @@ func third() (result bool) {
 			issues = rule.Check(fset, file)
 			if len(issues) != tt.expected {
 				t.Errorf("Expected %d issues, got %d", tt.expected, len(issues))
-				for i, issue := range issues {
+				var i int
+				var issue types.Issue
+				for i, issue = range issues {
 					t.Logf("Issue %d: %s at line %d", i+1, issue.Message, issue.Line)
 				}
 			}
 
 			// Verify all issues have correct code and rule name
-			for _, issue := range issues {
+			var issue types.Issue
+			for _, issue = range issues {
 				if issue.Rule != "named-returns" {
 					t.Errorf("Expected rule 'named-returns', got %s", issue.Rule)
 				}
@@ -452,7 +476,12 @@ func (m MyStruct) getValue() (value int) {
 	var rule *NakedReturnRule
 	rule = &NakedReturnRule{}
 
-	for _, tt := range tests {
+	var tt struct {
+		name     string
+		code     string
+		expected int
+	}
+	for _, tt = range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var fset *token.FileSet
 			fset = token.NewFileSet()
@@ -467,13 +496,16 @@ func (m MyStruct) getValue() (value int) {
 			issues = rule.Check(fset, file)
 			if len(issues) != tt.expected {
 				t.Errorf("Expected %d issues, got %d", tt.expected, len(issues))
-				for i, issue := range issues {
+				var i int
+				var issue types.Issue
+				for i, issue = range issues {
 					t.Logf("Issue %d: %s at line %d", i+1, issue.Message, issue.Line)
 				}
 			}
 
 			// Verify all issues have correct code and rule name
-			for _, issue := range issues {
+			var issue types.Issue
+			for _, issue = range issues {
 				if issue.Rule != "naked-return" {
 					t.Errorf("Expected rule 'naked-return', got %s", issue.Rule)
 				}
@@ -579,7 +611,12 @@ const Enabled = false`,
 	var rule *ConstNoTypeRule
 	rule = &ConstNoTypeRule{}
 
-	for _, tt := range tests {
+	var tt struct {
+		name     string
+		code     string
+		expected int
+	}
+	for _, tt = range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var fset *token.FileSet
 			fset = token.NewFileSet()
@@ -594,13 +631,16 @@ const Enabled = false`,
 			issues = rule.Check(fset, file)
 			if len(issues) != tt.expected {
 				t.Errorf("Expected %d issues, got %d", tt.expected, len(issues))
-				for i, issue := range issues {
+				var i int
+				var issue types.Issue
+				for i, issue = range issues {
 					t.Logf("Issue %d: %s at line %d", i+1, issue.Message, issue.Line)
 				}
 			}
 
 			// Verify all issues have correct code and rule name
-			for _, issue := range issues {
+			var issue types.Issue
+			for _, issue = range issues {
 				if issue.Rule != "const-no-type" {
 					t.Errorf("Expected rule 'const-no-type', got %s", issue.Rule)
 				}
@@ -701,7 +741,12 @@ func someFunc() error { return nil }`,
 	var rule *IfInitRule
 	rule = &IfInitRule{}
 
-	for _, tt := range tests {
+	var tt struct {
+		name     string
+		code     string
+		expected int
+	}
+	for _, tt = range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var fset *token.FileSet
 			fset = token.NewFileSet()
@@ -716,13 +761,16 @@ func someFunc() error { return nil }`,
 			issues = rule.Check(fset, file)
 			if len(issues) != tt.expected {
 				t.Errorf("Expected %d issues, got %d", tt.expected, len(issues))
-				for i, issue := range issues {
+				var i int
+				var issue types.Issue
+				for i, issue = range issues {
 					t.Logf("Issue %d: %s at line %d", i+1, issue.Message, issue.Line)
 				}
 			}
 
 			// Verify all issues have correct code and rule name
-			for _, issue := range issues {
+			var issue types.Issue
+			for _, issue = range issues {
 				if issue.Rule != "if-init" {
 					t.Errorf("Expected rule 'if-init', got %s", issue.Rule)
 				}
