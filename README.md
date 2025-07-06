@@ -31,19 +31,25 @@ The linter includes rules to detect and flag specific code patterns:
      harder and bugs more likely.
    - **Detects**: `var a = 33`, `var r = strings.Split("a,b", ",")`
 
-3. **Named Returns Rule (`named-returns`)**
+3. **Constant Without Type Rule (`const-no-type`)**
+   - **Description**: Flags constant declarations without explicit type
+     when a value is provided. Implicit types can make code reviews
+     harder and bugs more likely.
+   - **Detects**: `const BufferSize = 1024`, `const Pi = 3.14159`, `const Name = "app"`
+
+4. **Named Returns Rule (`named-returns`)**
    - **Description**: Flags functions with named return parameters.
      Named returns make it unclear what values are returned and can
      lead to confusion during code reviews.
    - **Detects**: `func divide(a, b int) (result int, err error)`
 
-4. **Naked Return Rule (`naked-return`)**
+5. **Naked Return Rule (`naked-return`)**
    - **Description**: Flags naked returns in functions with named return
      parameters. Naked returns make it unclear what values are being
      returned without checking the function signature.
    - **Detects**: `return` (without explicit values) in functions with named returns
 
-5. **If Initialization Rule (`if-init`)**
+6. **If Initialization Rule (`if-init`)**
    - **Description**: Flags `if` statements with initializations. Such
      statements can be uncommon, unreadable, and disrupt the flow of the
      code.
@@ -57,6 +63,7 @@ You can ignore specific rules for certain lines of code using the
 ```go
 x := 10 //nolint:short-var-decl
 var a = 33 //nolint:var-no-type
+const BufferSize = 1024 //nolint:const-no-type
 func recover() (err error) { //nolint:named-returns
     defer func() {
         if r := recover(); r != nil {
@@ -107,6 +114,7 @@ The linter is implemented with specific rules to ensure code quality:
 
 - **ShortVarDeclRule**: Detects short variable declarations (`:=`).
 - **VarNoTypeRule**: Detects variable declarations without explicit type.
+- **ConstNoTypeRule**: Detects constant declarations without explicit type.
 - **NamedReturnsRule**: Detects functions with named return parameters.
 - **NakedReturnRule**: Detects naked returns in functions with named parameters.
 - **IfInitRule**: Detects `if` statements with initializations.

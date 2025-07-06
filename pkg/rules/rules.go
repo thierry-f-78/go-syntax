@@ -204,6 +204,44 @@ func (r *NakedReturnRule) Check(fset *token.FileSet, file *ast.File) []types.Iss
 	return issues
 }
 
+type ConstNoTypeRule struct{}
+
+func (r *ConstNoTypeRule) Name() string {
+	return "const-no-type"
+}
+
+func (r *ConstNoTypeRule) Check(fset *token.FileSet, file *ast.File) []types.Issue {
+	var issues []types.Issue
+
+	ast.Inspect(file, func(n ast.Node) bool {
+		switch node := n.(type) {
+		case *ast.GenDecl:
+			if node.Tok == token.CONST {
+				for _, spec := range node.Specs {
+					if valueSpec, ok := spec.(*ast.ValueSpec); ok {
+						// Check if type is not specified but values are provided
+						if valueSpec.Type == nil && len(valueSpec.Values) > 0 {
+							var pos token.Position
+							pos = fset.Position(valueSpec.Pos())
+							issues = append(issues, types.Issue{
+								File:        pos.Filename,
+								Line:        pos.Line,
+								Column:      pos.Column,
+								Message:     "Constant declaration without explicit type is not allowed",
+								Description: "Avoid 'const x = value': unclear types make reviews harder, bugs likelier.",
+								Rule:        r.Name(),
+							})
+						}
+					}
+				}
+			}
+		}
+		return true
+	})
+
+	return issues
+}
+
 type IfInitRule struct{}
 
 func (r *IfInitRule) Name() string {

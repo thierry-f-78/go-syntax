@@ -482,6 +482,133 @@ func (m MyStruct) getValue() (value int) {
 	}
 }
 
+func TestConstNoTypeRule(t *testing.T) {
+	var tests []struct {
+		name     string
+		code     string
+		expected int
+	}
+	tests = []struct {
+		name     string
+		code     string
+		expected int
+	}{
+		{
+			name: "const without type - should detect",
+			code: `package main
+const BufferSize = 1024`,
+			expected: 1,
+		},
+		{
+			name: "const string without type - should detect",
+			code: `package main
+const AppName = "myapp"`,
+			expected: 1,
+		},
+		{
+			name: "const float without type - should detect",
+			code: `package main
+const Pi = 3.14159`,
+			expected: 1,
+		},
+		{
+			name: "multiple const without type - should detect all",
+			code: `package main
+const (
+	BufferSize = 1024
+	AppName = "myapp"
+	Pi = 3.14159
+)`,
+			expected: 3,
+		},
+		{
+			name: "const with explicit type - should not detect",
+			code: `package main
+const BufferSize int = 1024
+const AppName string = "myapp"
+const Pi float64 = 3.14159`,
+			expected: 0,
+		},
+		{
+			name: "const without value - should not detect",
+			code: `package main
+const (
+	Red = iota
+	Green
+	Blue
+)`,
+			expected: 1, // only Red has a value (iota)
+		},
+		{
+			name: "const with type and value - should not detect",
+			code: `package main
+const (
+	BufferSize int = 1024
+	AppName string = "myapp"
+	Enabled bool = true
+)`,
+			expected: 0,
+		},
+		{
+			name: "mixed const declarations - should detect only those without type",
+			code: `package main
+const (
+	Size = 100          // should detect
+	Name string = "app" // should not detect
+	Count int = 5       // should not detect
+	Value = 42          // should detect
+)`,
+			expected: 2, // Size and Value
+		},
+		{
+			name: "const with complex expressions - should detect",
+			code: `package main
+const MaxUsers = 100 * 1024
+const Timeout = 30 * time.Second`,
+			expected: 2,
+		},
+		{
+			name: "const bool without type - should detect",
+			code: `package main
+const Debug = true
+const Enabled = false`,
+			expected: 2,
+		},
+	}
+
+	var rule *ConstNoTypeRule
+	rule = &ConstNoTypeRule{}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var fset *token.FileSet
+			fset = token.NewFileSet()
+			var file *ast.File
+			var err error
+			file, err = parser.ParseFile(fset, "test.go", tt.code, parser.ParseComments)
+			if err != nil {
+				t.Fatalf("Failed to parse code: %v", err)
+			}
+
+			var issues []types.Issue
+			issues = rule.Check(fset, file)
+			if len(issues) != tt.expected {
+				t.Errorf("Expected %d issues, got %d", tt.expected, len(issues))
+				for i, issue := range issues {
+					t.Logf("Issue %d: %s at line %d", i+1, issue.Message, issue.Line)
+				}
+			}
+
+			// Verify all issues have correct code and rule name
+			for _, issue := range issues {
+				if issue.Rule != "const-no-type" {
+					t.Errorf("Expected rule 'const-no-type', got %s", issue.Rule)
+				}
+			}
+		})
+	}
+}
+
 func TestIfInitRule(t *testing.T) {
 	var tests []struct {
 		name     string
