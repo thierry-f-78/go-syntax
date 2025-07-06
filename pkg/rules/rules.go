@@ -146,6 +146,64 @@ func (r *NamedReturnsRule) Check(fset *token.FileSet, file *ast.File) []types.Is
 	return issues
 }
 
+type NakedReturnRule struct{}
+
+func (r *NakedReturnRule) Name() string {
+	return "naked-return"
+}
+
+func (r *NakedReturnRule) Check(fset *token.FileSet, file *ast.File) []types.Issue {
+	var issues []types.Issue
+
+	ast.Inspect(file, func(n ast.Node) bool {
+		switch node := n.(type) {
+		case *ast.ReturnStmt:
+			// Check if it's a naked return (no explicit values)
+			if len(node.Results) == 0 {
+				// Find the containing function to check if it has named returns
+				var containingFunc *ast.FuncDecl
+				ast.Inspect(file, func(fn ast.Node) bool {
+					if funcDecl, ok := fn.(*ast.FuncDecl); ok {
+						// Check if the return statement is within this function
+						if funcDecl.Pos() <= node.Pos() && node.Pos() <= funcDecl.End() {
+							containingFunc = funcDecl
+							return false
+						}
+					}
+					return true
+				})
+
+				// If we found a containing function and it has named returns, flag it
+				if containingFunc != nil && containingFunc.Type.Results != nil {
+					hasNamedReturns := false
+					for _, field := range containingFunc.Type.Results.List {
+						if len(field.Names) > 0 {
+							hasNamedReturns = true
+							break
+						}
+					}
+
+					if hasNamedReturns {
+						var pos token.Position
+						pos = fset.Position(node.Pos())
+						issues = append(issues, types.Issue{
+							File:        pos.Filename,
+							Line:        pos.Line,
+							Column:      pos.Column,
+							Message:     "Naked return is not allowed",
+							Description: "Avoid naked returns: unclear what values are returned.",
+							Rule:        r.Name(),
+						})
+					}
+				}
+			}
+		}
+		return true
+	})
+
+	return issues
+}
+
 type IfInitRule struct{}
 
 func (r *IfInitRule) Name() string {

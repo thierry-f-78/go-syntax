@@ -344,6 +344,144 @@ func third() (result bool) {
 	}
 }
 
+func TestNakedReturnRule(t *testing.T) {
+	var tests []struct {
+		name     string
+		code     string
+		expected int
+	}
+	tests = []struct {
+		name     string
+		code     string
+		expected int
+	}{
+		{
+			name: "naked return with named parameters - should detect",
+			code: `package main
+import "fmt"
+func divide(a, b int) (result int, err error) {
+	if b == 0 {
+		err = fmt.Errorf("division by zero")
+		return
+	}
+	result = a / b
+	return
+}`,
+			expected: 2, // two naked returns
+		},
+		{
+			name: "single naked return - should detect",
+			code: `package main
+func getValue() (value int) {
+	value = 42
+	return
+}`,
+			expected: 1,
+		},
+		{
+			name: "explicit return with named parameters - should not detect",
+			code: `package main
+import "fmt"
+func divide(a, b int) (result int, err error) {
+	if b == 0 {
+		return 0, fmt.Errorf("division by zero")
+	}
+	return a / b, nil
+}`,
+			expected: 0,
+		},
+		{
+			name: "naked return without named parameters - should not detect",
+			code: `package main
+func doSomething() {
+	println("hello")
+	return
+}`,
+			expected: 0,
+		},
+		{
+			name: "explicit return without named parameters - should not detect",
+			code: `package main
+func divide(a, b int) (int, error) {
+	return a / b, nil
+}`,
+			expected: 0,
+		},
+		{
+			name: "mixed returns - should detect only naked ones",
+			code: `package main
+import "fmt"
+func process() (result int, err error) {
+	someCondition := true
+	if someCondition {
+		return 0, fmt.Errorf("error")  // explicit - ok
+	}
+	result = 42
+	return  // naked - should detect
+}`,
+			expected: 1,
+		},
+		{
+			name: "multiple functions - should detect all naked returns",
+			code: `package main
+func first() (a int) {
+	a = 1
+	return  // naked - should detect
+}
+func second() (int) {
+	return 2  // explicit - ok
+}
+func third() (result bool) {
+	result = true
+	return  // naked - should detect
+}`,
+			expected: 2, // first and third functions
+		},
+		{
+			name: "method with naked return - should detect",
+			code: `package main
+type MyStruct struct{}
+func (m MyStruct) getValue() (value int) {
+	value = 42
+	return
+}`,
+			expected: 1,
+		},
+	}
+
+	var rule *NakedReturnRule
+	rule = &NakedReturnRule{}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var fset *token.FileSet
+			fset = token.NewFileSet()
+			var file *ast.File
+			var err error
+			file, err = parser.ParseFile(fset, "test.go", tt.code, parser.ParseComments)
+			if err != nil {
+				t.Fatalf("Failed to parse code: %v", err)
+			}
+
+			var issues []types.Issue
+			issues = rule.Check(fset, file)
+			if len(issues) != tt.expected {
+				t.Errorf("Expected %d issues, got %d", tt.expected, len(issues))
+				for i, issue := range issues {
+					t.Logf("Issue %d: %s at line %d", i+1, issue.Message, issue.Line)
+				}
+			}
+
+			// Verify all issues have correct code and rule name
+			for _, issue := range issues {
+				if issue.Rule != "naked-return" {
+					t.Errorf("Expected rule 'naked-return', got %s", issue.Rule)
+				}
+			}
+		})
+	}
+}
+
 func TestIfInitRule(t *testing.T) {
 	var tests []struct {
 		name     string

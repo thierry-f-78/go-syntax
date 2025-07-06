@@ -20,6 +20,7 @@ func New() *Linter {
 			&rules.ShortVarDeclRule{},
 			&rules.VarNoTypeRule{},
 			&rules.NamedReturnsRule{},
+			&rules.NakedReturnRule{},
 			&rules.IfInitRule{},
 		},
 	}
