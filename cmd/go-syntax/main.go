@@ -46,7 +46,7 @@ func main() {
 	for _, path := range paths {
 		var walkPath string
 		var recursive bool
-		
+
 		// Handle Go-style path patterns
 		if strings.HasSuffix(path, "/...") {
 			walkPath = strings.TrimSuffix(path, "/...")
@@ -63,7 +63,7 @@ func main() {
 			if err != nil {
 				return err
 			}
-			
+
 			// If not recursive, only process files in the exact directory
 			if !recursive {
 				rel, _ := filepath.Rel(walkPath, currentPath)
@@ -74,7 +74,7 @@ func main() {
 					return nil
 				}
 			}
-			
+
 			if strings.HasSuffix(currentPath, ".go") && !strings.Contains(currentPath, "vendor/") {
 				files = append(files, currentPath)
 			}

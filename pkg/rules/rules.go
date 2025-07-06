@@ -110,6 +110,42 @@ func (r *VarNoTypeRule) Check(fset *token.FileSet, file *ast.File) []types.Issue
 	return issues
 }
 
+type NamedReturnsRule struct{}
+
+func (r *NamedReturnsRule) Name() string {
+	return "named-returns"
+}
+
+func (r *NamedReturnsRule) Check(fset *token.FileSet, file *ast.File) []types.Issue {
+	var issues []types.Issue
+
+	ast.Inspect(file, func(n ast.Node) bool {
+		switch node := n.(type) {
+		case *ast.FuncDecl:
+			if node.Type.Results != nil && len(node.Type.Results.List) > 0 {
+				for _, field := range node.Type.Results.List {
+					// Check if any return parameter has a name
+					if len(field.Names) > 0 {
+						var pos token.Position
+						pos = fset.Position(field.Pos())
+						issues = append(issues, types.Issue{
+							File:        pos.Filename,
+							Line:        pos.Line,
+							Column:      pos.Column,
+							Message:     "Named return parameters are not allowed",
+							Description: "Avoid named returns: unclear what is returned, harder to review.",
+							Rule:        r.Name(),
+						})
+					}
+				}
+			}
+		}
+		return true
+	})
+
+	return issues
+}
+
 type IfInitRule struct{}
 
 func (r *IfInitRule) Name() string {

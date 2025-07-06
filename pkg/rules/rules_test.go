@@ -235,6 +235,115 @@ func main() {
 	}
 }
 
+func TestNamedReturnsRule(t *testing.T) {
+	var tests []struct {
+		name     string
+		code     string
+		expected int
+	}
+	tests = []struct {
+		name     string
+		code     string
+		expected int
+	}{
+		{
+			name: "named return parameters - should detect",
+			code: `package main
+func divide(a, b int) (result int, err error) {
+	return a / b, nil
+}`,
+			expected: 2, // result and err
+		},
+		{
+			name: "single named return - should detect",
+			code: `package main
+func getValue() (value int) {
+	return 42
+}`,
+			expected: 1,
+		},
+		{
+			name: "multiple named returns - should detect all",
+			code: `package main
+func process() (result int, err error) {
+	return 42, nil
+}`,
+			expected: 2, // result and err are both named
+		},
+		{
+			name: "unnamed return parameters - should not detect",
+			code: `package main
+func divide(a, b int) (int, error) {
+	return a / b, nil
+}`,
+			expected: 0,
+		},
+		{
+			name: "function with no return - should not detect",
+			code: `package main
+func doSomething() {
+	println("hello")
+}`,
+			expected: 0,
+		},
+		{
+			name: "method with named returns - should detect",
+			code: `package main
+type MyStruct struct{}
+func (m MyStruct) calculate() (result int, err error) {
+	return 42, nil
+}`,
+			expected: 2,
+		},
+		{
+			name: "multiple functions - should detect all named returns",
+			code: `package main
+func first() (a int, b string) {
+	return 1, "test"
+}
+func second() (int, string) {
+	return 2, "ok"
+}
+func third() (result bool) {
+	return true
+}`,
+			expected: 3, // a, b, result
+		},
+	}
+
+	var rule *NamedReturnsRule
+	rule = &NamedReturnsRule{}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var fset *token.FileSet
+			fset = token.NewFileSet()
+			var file *ast.File
+			var err error
+			file, err = parser.ParseFile(fset, "test.go", tt.code, parser.ParseComments)
+			if err != nil {
+				t.Fatalf("Failed to parse code: %v", err)
+			}
+
+			var issues []types.Issue
+			issues = rule.Check(fset, file)
+			if len(issues) != tt.expected {
+				t.Errorf("Expected %d issues, got %d", tt.expected, len(issues))
+				for i, issue := range issues {
+					t.Logf("Issue %d: %s at line %d", i+1, issue.Message, issue.Line)
+				}
+			}
+
+			// Verify all issues have correct code and rule name
+			for _, issue := range issues {
+				if issue.Rule != "named-returns" {
+					t.Errorf("Expected rule 'named-returns', got %s", issue.Rule)
+				}
+			}
+		})
+	}
+}
+
 func TestIfInitRule(t *testing.T) {
 	var tests []struct {
 		name     string
