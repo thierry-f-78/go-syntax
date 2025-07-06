@@ -33,6 +33,19 @@ func (r *ShortVarDeclRule) Check(fset *token.FileSet, file *ast.File) []types.Is
 					})
 				}
 			}
+		case *ast.RangeStmt:
+			if node.Tok == token.DEFINE {
+				var pos token.Position
+				pos = fset.Position(node.Pos())
+				issues = append(issues, types.Issue{
+					File:        pos.Filename,
+					Line:        pos.Line,
+					Column:      pos.Column,
+					Message:     "Short variable declaration ':=' is not allowed in range",
+					Description: "Avoid ':=': unclear types make reviews harder, bugs likelier.",
+					Rule:        r.Name(),
+				})
+			}
 		}
 		return true
 	})
@@ -57,6 +70,44 @@ func (r *ShortVarDeclRule) isInTypeSwitch(assign *ast.AssignStmt, file *ast.File
 	})
 
 	return found
+}
+
+type VarNoTypeRule struct{}
+
+func (r *VarNoTypeRule) Name() string {
+	return "var-no-type"
+}
+
+func (r *VarNoTypeRule) Check(fset *token.FileSet, file *ast.File) []types.Issue {
+	var issues []types.Issue
+
+	ast.Inspect(file, func(n ast.Node) bool {
+		switch node := n.(type) {
+		case *ast.GenDecl:
+			if node.Tok == token.VAR {
+				for _, spec := range node.Specs {
+					if valueSpec, ok := spec.(*ast.ValueSpec); ok {
+						// Check if type is not specified but values are provided
+						if valueSpec.Type == nil && len(valueSpec.Values) > 0 {
+							var pos token.Position
+							pos = fset.Position(valueSpec.Pos())
+							issues = append(issues, types.Issue{
+								File:        pos.Filename,
+								Line:        pos.Line,
+								Column:      pos.Column,
+								Message:     "Variable declaration without explicit type is not allowed",
+								Description: "Avoid 'var x = value': unclear types make reviews harder, bugs likelier.",
+								Rule:        r.Name(),
+							})
+						}
+					}
+				}
+			}
+		}
+		return true
+	})
+
+	return issues
 }
 
 type IfInitRule struct{}

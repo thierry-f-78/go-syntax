@@ -69,7 +69,7 @@ func main() {
 			expected: 1,
 		},
 		{
-			name: "for range - check if detected",
+			name: "for range with short var - should detect",
 			code: `package main
 func main() {
 	items := []int{1, 2, 3}
@@ -77,7 +77,7 @@ func main() {
 		_, _ = i, v
 	}
 }`,
-			expected: 1, // check what is actually detected
+			expected: 2, // items := and for i, v := range
 		},
 		{
 			name: "function call with short var - should detect",
@@ -118,6 +118,117 @@ func someFunc() string { return "" }`,
 			for _, issue := range issues {
 				if issue.Rule != "short-var-decl" {
 					t.Errorf("Expected rule 'short-var-decl', got %s", issue.Rule)
+				}
+			}
+		})
+	}
+}
+
+func TestVarNoTypeRule(t *testing.T) {
+	var tests []struct {
+		name     string
+		code     string
+		expected int
+	}
+	tests = []struct {
+		name     string
+		code     string
+		expected int
+	}{
+		{
+			name: "var without type - should detect",
+			code: `package main
+func main() {
+	var a = 33
+}`,
+			expected: 1,
+		},
+		{
+			name: "var with function call - should detect",
+			code: `package main
+import "strings"
+func main() {
+	var r = strings.Split("a,b", ",")
+}`,
+			expected: 1,
+		},
+		{
+			name: "multiple var without type - should detect all",
+			code: `package main
+func main() {
+	var a = 33
+	var b = "test"
+	var c = true
+}`,
+			expected: 3,
+		},
+		{
+			name: "var with explicit type - should not detect",
+			code: `package main
+func main() {
+	var a int = 33
+	var b string = "test"
+}`,
+			expected: 0,
+		},
+		{
+			name: "var without value - should not detect",
+			code: `package main
+func main() {
+	var a int
+	var b string
+}`,
+			expected: 0,
+		},
+		{
+			name: "var with type and value - should not detect",
+			code: `package main
+import "strings"
+func main() {
+	var r []string = strings.Split("a,b", ",")
+}`,
+			expected: 0,
+		},
+		{
+			name: "mixed var declarations - should detect only those without type",
+			code: `package main
+func main() {
+	var a = 33        // should detect
+	var b int = 42    // should not detect
+	var c string      // should not detect
+	var d = "test"    // should detect
+}`,
+			expected: 2,
+		},
+	}
+
+	var rule *VarNoTypeRule
+	rule = &VarNoTypeRule{}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var fset *token.FileSet
+			fset = token.NewFileSet()
+			var file *ast.File
+			var err error
+			file, err = parser.ParseFile(fset, "test.go", tt.code, parser.ParseComments)
+			if err != nil {
+				t.Fatalf("Failed to parse code: %v", err)
+			}
+
+			var issues []types.Issue
+			issues = rule.Check(fset, file)
+			if len(issues) != tt.expected {
+				t.Errorf("Expected %d issues, got %d", tt.expected, len(issues))
+				for i, issue := range issues {
+					t.Logf("Issue %d: %s at line %d", i+1, issue.Message, issue.Line)
+				}
+			}
+
+			// Verify all issues have correct code and rule name
+			for _, issue := range issues {
+				if issue.Rule != "var-no-type" {
+					t.Errorf("Expected rule 'var-no-type', got %s", issue.Rule)
 				}
 			}
 		})

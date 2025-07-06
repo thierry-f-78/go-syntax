@@ -18,7 +18,6 @@ func main() {
 	var err error
 	var issues []types.Issue
 
-	var path = flag.String("path", ".", "Path to analyze")
 	var verbose *bool = flag.Bool("v", false, "Verbose output")
 	var exitCode = flag.Int("exit-code", 1, "Exit code when issues are found")
 	var color *bool = flag.Bool("c", true, "Color output")
@@ -35,21 +34,57 @@ func main() {
 		reset = ""
 	}
 
+	// Use command line arguments as paths, default to "." if none provided
+	paths := flag.Args()
+	if len(paths) == 0 {
+		paths = []string{"."}
+	}
+
 	l = linter.New()
 
-	err = filepath.Walk(*path, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
+	// Process each path argument
+	for _, path := range paths {
+		var walkPath string
+		var recursive bool
+		
+		// Handle Go-style path patterns
+		if strings.HasSuffix(path, "/...") {
+			walkPath = strings.TrimSuffix(path, "/...")
+			recursive = true
+		} else if path == "./..." {
+			walkPath = "."
+			recursive = true
+		} else {
+			walkPath = path
+			recursive = false
 		}
-		if strings.HasSuffix(path, ".go") && !strings.Contains(path, "vendor/") {
-			files = append(files, path)
-		}
-		return nil
-	})
 
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error walking directory: %v\n", err)
-		os.Exit(1)
+		err = filepath.Walk(walkPath, func(currentPath string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			
+			// If not recursive, only process files in the exact directory
+			if !recursive {
+				rel, _ := filepath.Rel(walkPath, currentPath)
+				if strings.Contains(rel, string(filepath.Separator)) {
+					if info.IsDir() {
+						return filepath.SkipDir
+					}
+					return nil
+				}
+			}
+			
+			if strings.HasSuffix(currentPath, ".go") && !strings.Contains(currentPath, "vendor/") {
+				files = append(files, currentPath)
+			}
+			return nil
+		})
+
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error walking directory %s: %v\n", path, err)
+			os.Exit(1)
+		}
 	}
 
 	issues = l.Lint(files)
