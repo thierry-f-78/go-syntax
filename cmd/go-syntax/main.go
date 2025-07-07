@@ -12,6 +12,43 @@ import (
 	"github.com/thierry-f-78/go-syntax/pkg/types"
 )
 
+// stringSlice implements flag.Value for multiple string flags
+type stringSlice []string
+
+func (s *stringSlice) String() string {
+	return strings.Join(*s, ",")
+}
+
+func (s *stringSlice) Set(value string) error {
+	*s = append(*s, value)
+	return nil
+}
+
+// isExcluded checks if a file path matches any of the exclude patterns
+func isExcluded(filePath string, excludePatterns []string) bool {
+	var pattern string
+	for _, pattern = range excludePatterns {
+		var matched bool
+		var err error
+		matched, err = filepath.Match(pattern, filepath.Base(filePath))
+		if err == nil && matched {
+			return true
+		}
+
+		// Also try matching the full path
+		matched, err = filepath.Match(pattern, filePath)
+		if err == nil && matched {
+			return true
+		}
+
+		// Check if pattern matches any part of the path
+		if strings.Contains(filePath, pattern) {
+			return true
+		}
+	}
+	return false
+}
+
 func main() {
 	var l *linter.Linter
 	var files []string
@@ -21,6 +58,9 @@ func main() {
 	var verbose *bool = flag.Bool("v", false, "Verbose output")
 	var exitCode *int = flag.Int("exit-code", 1, "Exit code when issues are found")
 	var color *bool = flag.Bool("c", true, "Color output")
+
+	var excludePatterns stringSlice
+	flag.Var(&excludePatterns, "e", "Exclude files matching pattern (can be repeated)")
 
 	var red string = "\033[31m"
 	var blue string = "\033[34m"
@@ -78,7 +118,9 @@ func main() {
 			}
 
 			if strings.HasSuffix(currentPath, ".go") && !strings.Contains(currentPath, "vendor/") {
-				files = append(files, currentPath)
+				if !isExcluded(currentPath, excludePatterns) {
+					files = append(files, currentPath)
+				}
 			}
 			return nil
 		})

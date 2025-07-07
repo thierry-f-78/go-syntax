@@ -128,6 +128,7 @@ go-syntax [paths...]
 - `-v`: Enable verbose output.
 - `-exit-code`: Set the exit code when issues are found. Defaults to `1`.
 - `-c`: Enable or disable color output. Defaults to `true`.
+- `-e <pattern>`: Exclude files matching pattern. Can be repeated multiple times.
 
 ### Examples
 
@@ -143,9 +144,48 @@ go-syntax ./cmd/... ./pkg/...
 
 # Analyze with verbose output
 go-syntax -v ./...
+
+# Exclude specific files
+go-syntax -e "generated.go" ./...
+
+# Exclude files by pattern
+go-syntax -e "*_test.go" ./...
+
+# Multiple exclude patterns
+go-syntax -e "generated.go" -e "*_mock.go" -e "vendor/*" ./...
+
+# Exclude with wildcard patterns
+go-syntax -e "*.pb.go" -e "wire_gen.go" ./...
 ```
 
 The linter supports Go-style path patterns like `./...` for recursive analysis.
+
+## File Exclusion
+
+The `-e` flag allows you to exclude files from analysis using patterns:
+
+### Pattern Types
+
+1. **Exact filename**: `-e "generated.go"`
+2. **Wildcard patterns**: `-e "*.pb.go"` (protocol buffer files)
+3. **Path patterns**: `-e "vendor/*"` (anything in vendor directory)
+4. **Multiple patterns**: `-e "*.pb.go" -e "*_mock.go" -e "generated.go"`
+
+### Common Use Cases
+
+```sh
+# Exclude generated files
+go-syntax -e "*.pb.go" -e "*_gen.go" ./...
+
+# Exclude test files
+go-syntax -e "*_test.go" ./...
+
+# Exclude vendor and generated files
+go-syntax -e "vendor/*" -e "*.pb.go" -e "wire_gen.go" ./...
+
+# Exclude specific directories
+go-syntax -e "testdata/*" -e "examples/*" ./...
+```
 
 ## Code
 
