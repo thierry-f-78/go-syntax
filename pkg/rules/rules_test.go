@@ -161,14 +161,14 @@ func main() {
 			expected: 1,
 		},
 		{
-			name: "multiple var without type - should detect all",
+			name: "multiple var without type - should detect only ambiguous ones",
 			code: `package main
 func main() {
 	var a = 33
 	var b = "test"
 	var c = true
 }`,
-			expected: 3,
+			expected: 1, // only 'a' (b and c are unambiguous literals)
 		},
 		{
 			name: "var with explicit type - should not detect",
@@ -198,15 +198,15 @@ func main() {
 			expected: 0,
 		},
 		{
-			name: "mixed var declarations - should detect only those without type",
+			name: "mixed var declarations - should detect only ambiguous ones",
 			code: `package main
 func main() {
-	var a = 33        // should detect
-	var b int = 42    // should not detect
-	var c string      // should not detect
-	var d = "test"    // should detect
+	var a = 33        // should detect (int literal ambiguous)
+	var b int = 42    // should not detect (explicit type)
+	var c string      // should not detect (no value)
+	var d = "test"    // should not detect (string literal unambiguous)
 }`,
-			expected: 2,
+			expected: 1, // only 'a'
 		},
 		{
 			name: "var with composite literal - should not detect",
@@ -234,6 +234,24 @@ func main() {
 func main() {
 	var x interface{} = 42
 	var a = x.(int)
+}`,
+			expected: 0,
+		},
+		{
+			name: "var with string literal - should not detect",
+			code: `package main
+func main() {
+	var a = "hello"
+	var b = ` + "`world`" + `
+}`,
+			expected: 0,
+		},
+		{
+			name: "var with bool literal - should not detect",
+			code: `package main
+func main() {
+	var a = true
+	var b = false
 }`,
 			expected: 0,
 		},
@@ -561,10 +579,10 @@ const BufferSize = 1024`,
 			expected: 1,
 		},
 		{
-			name: "const string without type - should detect",
+			name: "const string without type - should not detect (unambiguous literal)",
 			code: `package main
 const AppName = "myapp"`,
-			expected: 1,
+			expected: 0,
 		},
 		{
 			name: "const float without type - should detect",
@@ -573,14 +591,14 @@ const Pi = 3.14159`,
 			expected: 1,
 		},
 		{
-			name: "multiple const without type - should detect all",
+			name: "multiple const without type - should detect only ambiguous ones",
 			code: `package main
 const (
 	BufferSize = 1024
 	AppName = "myapp"
 	Pi = 3.14159
 )`,
-			expected: 3,
+			expected: 2, // BufferSize and Pi (AppName is string literal)
 		},
 		{
 			name: "const with explicit type - should not detect",
@@ -611,13 +629,15 @@ const (
 			expected: 0,
 		},
 		{
-			name: "mixed const declarations - should detect only those without type",
+			name: "mixed const declarations - should detect only ambiguous ones",
 			code: `package main
 const (
-	Size = 100          // should detect
-	Name string = "app" // should not detect
-	Count int = 5       // should not detect
-	Value = 42          // should detect
+	Size = 100          // should detect (int literal ambiguous)
+	Name string = "app" // should not detect (explicit type)
+	Count int = 5       // should not detect (explicit type)
+	Value = 42          // should detect (int literal ambiguous)
+	Message = "hello"   // should not detect (string literal unambiguous)
+	Debug = true        // should not detect (bool literal unambiguous)
 )`,
 			expected: 2, // Size and Value
 		},
@@ -629,11 +649,22 @@ const Timeout = 30 * time.Second`,
 			expected: 2,
 		},
 		{
-			name: "const bool without type - should detect",
+			name: "const bool without type - should not detect (unambiguous literal)",
 			code: `package main
 const Debug = true
 const Enabled = false`,
-			expected: 2,
+			expected: 0,
+		},
+		{
+			name: "const with string and bool literals - should not detect",
+			code: `package main
+const (
+	Name = "test"
+	Debug = true
+	Version = "1.0"
+	Enabled = false
+)`,
+			expected: 0,
 		},
 	}
 

@@ -90,6 +90,20 @@ func hasExplicitType(expr ast.Expr) bool {
 	return false
 }
 
+// isUnambiguousLiteral checks if an expression is an unambiguous literal (string or bool)
+func isUnambiguousLiteral(expr ast.Expr) bool {
+	switch e := expr.(type) {
+	case *ast.BasicLit:
+		// String literals: "hello", `hello`
+		// Bool literals: true, false (but these are actually *ast.Ident)
+		return e.Kind == token.STRING
+	case *ast.Ident:
+		// Bool literals: true, false
+		return e.Name == "true" || e.Name == "false"
+	}
+	return false
+}
+
 type VarNoTypeRule struct{}
 
 func (r *VarNoTypeRule) Name() string {
@@ -110,8 +124,8 @@ func (r *VarNoTypeRule) Check(fset *token.FileSet, file *ast.File) []types.Issue
 					valueSpec, ok = spec.(*ast.ValueSpec)
 					if ok {
 						// Check if type is not specified but values are provided
-						// Exception: allow when the value has an explicit type
-						if valueSpec.Type == nil && len(valueSpec.Values) > 0 && !hasExplicitType(valueSpec.Values[0]) {
+						// Exception: allow when the value has an explicit type or is an unambiguous literal
+						if valueSpec.Type == nil && len(valueSpec.Values) > 0 && !hasExplicitType(valueSpec.Values[0]) && !isUnambiguousLiteral(valueSpec.Values[0]) {
 							var pos token.Position
 							pos = fset.Position(valueSpec.Pos())
 							issues = append(issues, types.Issue{
@@ -252,7 +266,8 @@ func (r *ConstNoTypeRule) Check(fset *token.FileSet, file *ast.File) []types.Iss
 					valueSpec, ok = spec.(*ast.ValueSpec)
 					if ok {
 						// Check if type is not specified but values are provided
-						if valueSpec.Type == nil && len(valueSpec.Values) > 0 {
+						// Exception: allow when the value is an unambiguous literal
+						if valueSpec.Type == nil && len(valueSpec.Values) > 0 && !isUnambiguousLiteral(valueSpec.Values[0]) {
 							var pos token.Position
 							pos = fset.Position(valueSpec.Pos())
 							issues = append(issues, types.Issue{
