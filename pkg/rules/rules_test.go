@@ -255,6 +255,15 @@ func main() {
 }`,
 			expected: 0,
 		},
+		{
+			name: "var with function literal - should not detect",
+			code: `package main
+func main() {
+	var a = func(int) error { return nil }
+	var b = func(x string) (int, error) { return 0, nil }
+}`,
+			expected: 0,
+		},
 	}
 
 	var rule *VarNoTypeRule

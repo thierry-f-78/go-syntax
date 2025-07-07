@@ -86,6 +86,9 @@ func hasExplicitType(expr ast.Expr) bool {
 	case *ast.TypeAssertExpr:
 		// x.(int)
 		return true
+	case *ast.FuncLit:
+		// func(int) error { ... }
+		return true
 	}
 	return false
 }
