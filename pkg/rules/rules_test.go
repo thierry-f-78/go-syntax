@@ -215,6 +215,7 @@ func main() {
 	var a = []int{1, 2, 3}
 	var b = map[string]int{"key": 1}
 	var c = struct{ x int }{x: 1}
+	var d = struct{}{}
 }`,
 			expected: 0,
 		},
@@ -261,6 +262,19 @@ func main() {
 func main() {
 	var a = func(int) error { return nil }
 	var b = func(x string) (int, error) { return 0, nil }
+}`,
+			expected: 0,
+		},
+		{
+			name: "var with type expressions - should not detect",
+			code: `package main
+func main() {
+	var a = struct{}
+	var b = []int
+	var c = map[string]int
+	var d = chan int
+	var e = interface{}
+	var f = *int
 }`,
 			expected: 0,
 		},

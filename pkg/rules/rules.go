@@ -76,7 +76,7 @@ func (r *ShortVarDeclRule) isInTypeSwitch(assign *ast.AssignStmt, file *ast.File
 func hasExplicitType(expr ast.Expr) bool {
 	switch e := expr.(type) {
 	case *ast.CompositeLit:
-		// []int{1, 2}, map[string]int{}
+		// []int{1, 2}, map[string]int{}, struct{}{}
 		return e.Type != nil
 	case *ast.CallExpr:
 		if ident, ok := e.Fun.(*ast.Ident); ok {
@@ -107,6 +107,42 @@ func isUnambiguousLiteral(expr ast.Expr) bool {
 	return false
 }
 
+// isTypeExpression checks if an expression represents a type (like struct{}, int, etc.)
+func isTypeExpression(expr ast.Expr) bool {
+	switch e := expr.(type) {
+	case *ast.StructType:
+		// struct{}, struct{x int}
+		return true
+	case *ast.ArrayType:
+		// []int, [5]int
+		return true
+	case *ast.MapType:
+		// map[string]int
+		return true
+	case *ast.ChanType:
+		// chan int, <-chan int
+		return true
+	case *ast.FuncType:
+		// func(), func(int) string
+		return true
+	case *ast.InterfaceType:
+		// interface{}, interface{Method()}
+		return true
+	case *ast.StarExpr:
+		// *int, *struct{}
+		return isTypeExpression(e.X)
+	case *ast.SelectorExpr:
+		// pkg.Type
+		return true
+	case *ast.Ident:
+		// Basic types: int, string, bool, etc.
+		// Note: This might include variable names too, but in the context of
+		// "var x = TYPE", if it's a valid Go program, TYPE should be a type
+		return true
+	}
+	return false
+}
+
 type VarNoTypeRule struct{}
 
 func (r *VarNoTypeRule) Name() string {
@@ -127,8 +163,8 @@ func (r *VarNoTypeRule) Check(fset *token.FileSet, file *ast.File) []types.Issue
 					valueSpec, ok = spec.(*ast.ValueSpec)
 					if ok {
 						// Check if type is not specified but values are provided
-						// Exception: allow when the value has an explicit type or is an unambiguous literal
-						if valueSpec.Type == nil && len(valueSpec.Values) > 0 && !hasExplicitType(valueSpec.Values[0]) && !isUnambiguousLiteral(valueSpec.Values[0]) {
+						// Exception: allow when the value has an explicit type, is an unambiguous literal, or is a type expression
+						if valueSpec.Type == nil && len(valueSpec.Values) > 0 && !hasExplicitType(valueSpec.Values[0]) && !isUnambiguousLiteral(valueSpec.Values[0]) && !isTypeExpression(valueSpec.Values[0]) {
 							var pos token.Position
 							pos = fset.Position(valueSpec.Pos())
 							issues = append(issues, types.Issue{
