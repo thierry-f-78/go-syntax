@@ -89,6 +89,11 @@ func hasExplicitType(expr ast.Expr) bool {
 	case *ast.FuncLit:
 		// func(int) error { ... }
 		return true
+	case *ast.UnaryExpr:
+		if e.Op == token.AND {
+			// &T{...}, &struct{x int}{x: 1}
+			return hasExplicitType(e.X)
+		}
 	}
 	return false
 }

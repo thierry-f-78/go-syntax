@@ -216,6 +216,8 @@ func main() {
 	var b = map[string]int{"key": 1}
 	var c = struct{ x int }{x: 1}
 	var d = struct{}{}
+	var e = &struct{x int}{x: 1}
+	var f = &[]int{1, 2}
 }`,
 			expected: 0,
 		},

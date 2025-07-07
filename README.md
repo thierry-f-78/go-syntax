@@ -30,7 +30,7 @@ The linter includes rules to detect and flag specific code patterns:
      when a value is provided. Implicit types can make code reviews
      harder and bugs more likely.
    - **Detects**: `var a = 33`, `var r = strings.Split("a,b", ",")`
-   - **Exception**: Allows declarations where the type is explicit in the value: `var x = []int{1, 2}`, `var a = make([]int, 0)`, `var b = x.(int)`, `var c = struct{}{}`, unambiguous literals: `var s = "hello"`, `var b = true`, function literals: `var f = func(int) error { ... }`, or type expressions: `var g = struct{}`, `var h = []int`
+   - **Exception**: Allows declarations where the type is explicit in the value: `var x = []int{1, 2}`, `var a = make([]int, 0)`, `var b = x.(int)`, `var c = struct{}{}`, `var d = &T{A: 4}`, unambiguous literals: `var s = "hello"`, `var b = true`, function literals: `var f = func(int) error { ... }`, or type expressions: `var g = struct{}`, `var h = []int`
 
 3. **Constant Without Type Rule (`const-no-type`)**
    - **Description**: Flags constant declarations without explicit type
