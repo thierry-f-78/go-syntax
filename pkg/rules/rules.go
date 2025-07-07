@@ -72,6 +72,24 @@ func (r *ShortVarDeclRule) isInTypeSwitch(assign *ast.AssignStmt, file *ast.File
 	return found
 }
 
+// hasExplicitType checks if an expression contains an explicit type
+func hasExplicitType(expr ast.Expr) bool {
+	switch e := expr.(type) {
+	case *ast.CompositeLit:
+		// []int{1, 2}, map[string]int{}
+		return e.Type != nil
+	case *ast.CallExpr:
+		if ident, ok := e.Fun.(*ast.Ident); ok {
+			// make([]int, 0), new(int)
+			return ident.Name == "make" || ident.Name == "new"
+		}
+	case *ast.TypeAssertExpr:
+		// x.(int)
+		return true
+	}
+	return false
+}
+
 type VarNoTypeRule struct{}
 
 func (r *VarNoTypeRule) Name() string {
@@ -92,7 +110,8 @@ func (r *VarNoTypeRule) Check(fset *token.FileSet, file *ast.File) []types.Issue
 					valueSpec, ok = spec.(*ast.ValueSpec)
 					if ok {
 						// Check if type is not specified but values are provided
-						if valueSpec.Type == nil && len(valueSpec.Values) > 0 {
+						// Exception: allow when the value has an explicit type
+						if valueSpec.Type == nil && len(valueSpec.Values) > 0 && !hasExplicitType(valueSpec.Values[0]) {
 							var pos token.Position
 							pos = fset.Position(valueSpec.Pos())
 							issues = append(issues, types.Issue{

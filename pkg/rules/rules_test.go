@@ -208,6 +208,35 @@ func main() {
 }`,
 			expected: 2,
 		},
+		{
+			name: "var with composite literal - should not detect",
+			code: `package main
+func main() {
+	var a = []int{1, 2, 3}
+	var b = map[string]int{"key": 1}
+	var c = struct{ x int }{x: 1}
+}`,
+			expected: 0,
+		},
+		{
+			name: "var with make/new - should not detect",
+			code: `package main
+func main() {
+	var a = make([]int, 0)
+	var b = new(int)
+	var c = make(map[string]int)
+}`,
+			expected: 0,
+		},
+		{
+			name: "var with type assertion - should not detect",
+			code: `package main
+func main() {
+	var x interface{} = 42
+	var a = x.(int)
+}`,
+			expected: 0,
+		},
 	}
 
 	var rule *VarNoTypeRule
