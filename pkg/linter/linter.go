@@ -74,7 +74,7 @@ func filterNolintIssues(issues []types.Issue, file *ast.File, fset *token.FileSe
 
 	var issue types.Issue
 	for _, issue = range issues {
-		if !isNolintComment(file, issue.Line, issue.Rule, fset) {
+		if !isNolintComment(file, issue.Line, issue.Rule, fset) && !isFileNolintComment(file, issue.Rule) {
 			filtered = append(filtered, issue)
 		}
 	}
@@ -95,6 +95,41 @@ func isNolintComment(file *ast.File, line int, ruleName string, fset *token.File
 					return true
 				}
 				if strings.Contains(comment.Text, ruleName) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func isFileNolintComment(file *ast.File, ruleName string) bool {
+	// Check only the first few comments in the file (file header)
+	if len(file.Comments) == 0 {
+		return false
+	}
+
+	// Look at the first comment group(s) which should be at the top of the file
+	var commentGroup *ast.CommentGroup
+	for _, commentGroup = range file.Comments {
+		// Only check comments that are likely to be file headers (first 10 lines)
+		if commentGroup.Pos() > file.Package+10 {
+			break
+		}
+
+		var comment *ast.Comment
+		for _, comment = range commentGroup.List {
+			if strings.Contains(comment.Text, "nolint") {
+				// Check for "//nolint" (disable all rules for file)
+				if comment.Text == "//nolint" || comment.Text == "// nolint" {
+					return true
+				}
+				// Check for "//nolint:all" (disable all rules for file)
+				if strings.Contains(comment.Text, "nolint:all") {
+					return true
+				}
+				// Check for specific rule in "//nolint:rule1,rule2"
+				if strings.Contains(comment.Text, "nolint:") && strings.Contains(comment.Text, ruleName) {
 					return true
 				}
 			}

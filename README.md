@@ -57,8 +57,11 @@ The linter includes rules to detect and flag specific code patterns:
 
 ## Ignoring Rules
 
-You can ignore specific rules for certain lines of code using the
-`//nolint` comment directive. Here's an example:
+You can ignore specific rules using the `//nolint` comment directive in two ways:
+
+### Line-Level Ignoring
+
+Ignore rules for specific lines by adding comments at the end of the line:
 
 ```go
 x := 10 //nolint:short-var-decl
@@ -74,7 +77,43 @@ func recover() (err error) { //nolint:named-returns
 }
 ```
 
-In this example, multiple rules are ignored for different lines. The `named-returns` and `naked-return` rules are commonly ignored together for panic recovery patterns.
+### File-Level Ignoring
+
+Ignore rules for entire files by adding comments at the top of the file (before the `package` declaration):
+
+```go
+//nolint:short-var-decl,var-no-type
+package main
+
+func main() {
+    // These violations will be ignored for the entire file
+    x := 42
+    var a = 33
+
+    // This will still be detected (if-init not in nolint list)
+    if err := someFunc(); err != nil {
+        return
+    }
+}
+```
+
+You can also disable all rules for a file:
+
+```go
+//nolint
+package main
+
+func main() {
+    // All violations ignored for this file
+    x := 42
+    var a = 33
+    if err := someFunc(); err != nil {
+        return
+    }
+}
+```
+
+The `named-returns` and `naked-return` rules are commonly ignored together for panic recovery patterns.
 
 ## Command Line Usage
 

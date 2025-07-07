@@ -214,3 +214,153 @@ func main() {
 		})
 	}
 }
+
+func TestFileNolintComments(t *testing.T) {
+	var tests []struct {
+		name     string
+		code     string
+		expected int // number of issues expected after file-level nolint filtering
+	}
+	tests = []struct {
+		name     string
+		code     string
+		expected int
+	}{
+		{
+			name: "file_nolint_all_should_ignore_everything",
+			code: `//nolint
+package main
+func main() {
+	x := 42
+	y := "test"
+	if err := someFunc(); err != nil {
+		return
+	}
+}
+func someFunc() error { return nil }`,
+			expected: 0, // all issues ignored
+		},
+		{
+			name: "file_nolint_with_space_should_ignore_everything",
+			code: `// nolint
+package main
+func main() {
+	x := 42
+	y := "test"
+}`,
+			expected: 0, // all issues ignored
+		},
+		{
+			name: "file_nolint_all_explicit_should_ignore_everything",
+			code: `//nolint:all
+package main
+func main() {
+	x := 42
+	y := "test"
+}`,
+			expected: 0, // all issues ignored
+		},
+		{
+			name: "file_nolint_specific_rule_should_ignore_only_that_rule",
+			code: `//nolint:short-var-decl
+package main
+func main() {
+	x := 42        // should be ignored
+	var a = 33     // should be detected (var-no-type)
+}`,
+			expected: 1, // only var-no-type should be detected
+		},
+		{
+			name: "file_nolint_multiple_rules_should_ignore_specified_rules",
+			code: `//nolint:short-var-decl,var-no-type
+package main
+func main() {
+	x := 42        // should be ignored (short-var-decl)
+	var a = 33     // should be ignored (var-no-type)
+	if err := someFunc(); err != nil { // should be detected (if-init)
+		return
+	}
+}
+func someFunc() error { return nil }`,
+			expected: 1, // only if-init should be detected
+		},
+		{
+			name: "no_file_nolint_should_detect_everything",
+			code: `package main
+func main() {
+	x := 42
+	y := "test"
+}`,
+			expected: 2, // both short-var-decl should be detected
+		},
+		{
+			name: "file_nolint_after_package_should_not_work",
+			code: `package main
+//nolint
+func main() {
+	x := 42
+	y := "test"
+}`,
+			expected: 2, // nolint after package declaration should not work for file-level
+		},
+		{
+			name: "file_nolint_wrong_rule_should_not_ignore",
+			code: `//nolint:if-init
+package main
+func main() {
+	x := 42  // should be detected (short-var-decl not ignored)
+}`,
+			expected: 1, // short-var-decl should still be detected
+		},
+	}
+
+	type testCase struct {
+		name     string
+		code     string
+		expected int
+	}
+	var tt testCase
+	for _, tt = range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var linter *Linter
+			linter = New()
+
+			// Create temporary file with code
+			var fset *token.FileSet
+			fset = token.NewFileSet()
+			var file *ast.File
+			var err error
+			file, err = parser.ParseFile(fset, "test.go", tt.code, parser.ParseComments)
+			if err != nil {
+				t.Fatalf("Failed to parse code: %v", err)
+			}
+
+			// Get issues from rules
+			var allIssues []types.Issue
+			var rule types.Rule
+			for _, rule = range linter.rules {
+				var issues []types.Issue
+				issues = rule.Check(fset, file)
+				allIssues = append(allIssues, issues...)
+			}
+
+			// Apply nolint filtering (both line-level and file-level)
+			var filteredIssues []types.Issue
+			filteredIssues = filterNolintIssues(allIssues, file, fset)
+
+			if len(filteredIssues) != tt.expected {
+				t.Errorf("Expected %d issues after file-level nolint filtering, got %d", tt.expected, len(filteredIssues))
+				t.Logf("All issues before filtering:")
+				var i int
+				var issue types.Issue
+				for i, issue = range allIssues {
+					t.Logf("  Issue %d: %s [%s] at line %d", i+1, issue.Message, issue.Rule, issue.Line)
+				}
+				t.Logf("Issues after filtering:")
+				for i, issue = range filteredIssues {
+					t.Logf("  Issue %d: %s [%s] at line %d", i+1, issue.Message, issue.Rule, issue.Line)
+				}
+			}
+		})
+	}
+}
